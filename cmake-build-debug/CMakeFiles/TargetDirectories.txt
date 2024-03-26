@@ -1,0 +1,3 @@
+C:/Users/oxana/CLionProjects/19.16/cmake-build-debug/CMakeFiles/19_16.dir
+C:/Users/oxana/CLionProjects/19.16/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/oxana/CLionProjects/19.16/cmake-build-debug/CMakeFiles/rebuild_cache.dir
