@@ -1,6 +1,8 @@
 #include <malloc.h>
 #include <stdbool.h>
 #include <math.h>
+#include <stdio.h>
+#include <intrin.h>
 #include "matrix.h"
 
 
@@ -18,12 +20,14 @@ matrix *getMemArrayOfMatrices(int nMatrices, int nRows, int nCols) {
     return ms;
 }
 
-void freeMemMatrix(void *m, int n) {
+void freeMemMatrix(void **m, int n) {
     for (int i = 0; i < n; i++)
-        free(m);
+        free(m[i]);
+    free(m);
 }
 
 void freeMemMatrices(matrix **ms, int nMatrices) {
+
     for (int i = 0; i < nMatrices; i++)
         free(ms[i]);
     free(ms);
@@ -45,12 +49,40 @@ void inputMatrices(matrix *ms, int nMatrices) {
     }
 }
 
-void outputMatrix(matrix m) {
-    return inputMatrix(&m);
+int MaxWidth(matrix m, matrix **mm) {
+    int maxWidth = 0;
+    char buffer[64];
+
+    for (int i = 0; i < m.nRows; ++i) {
+        for (int j = 0; j < m.nCols; ++j) {
+            sprintf(buffer, "%d", mm[i][j]);
+
+            int w = strlen(buffer);
+            if (w > maxWidth) {
+                maxWidth = w;
+            }
+        }
+    }
+
+    return maxWidth;
 }
 
-void outputMatrices(matrix *ms, int nMatrices) {
-    return inputMatrices(ms, nMatrices);
+void outputMatrix(matrix m, matrix **mm) {
+    int w = MaxWidth(m, mm);
+    for (int i = 0; i < m.nRows; ++i) {
+        for (int j = 0; j < m.nCols; ++j) {
+            printf("%*d%c", w, mm[i][j], (j == m.nCols - 1) ? '\n' : ' ');
+        }
+    }
+}
+
+void outputMatrices(matrix *ms, int nMatrices, matrix **mm) {
+    int w = MaxWidth(*ms, mm);
+    for (int i = 0; i < ms->nRows; ++i) {
+        for (int j = 0; j < ms->nCols; ++j) {
+            printf("%*d%c", w, mm[i][j], (j == ms->nCols - 1) ? '\n' : ' ');
+        }
+    }
 }
 
 void swapRows(matrix **m, int i1, int i2) {
@@ -67,9 +99,9 @@ void swapColumns(matrix **m, int j1, int j2) {
 
 void insertionSortRowsMatrixByRowCriteria(matrix m, matrix ***mm, int (*criteria)(int *, int)) {
     for (int y = 0; y < m.nRows; y++) {
-        for (int i = 0; i < (m.nCols - 1); i++) {
+        for (int i = 0; i < (m.nRows - 1); i++) {
             if (mm[i][0] > mm[i + 1][0]) {
-                for (int j = 0; j < m.nRows; j++) {
+                for (int j = 0; j < m.nCols; j++) {
                     int x = (int) mm[i][j];
                     mm[i][j] = mm[i + 1][j];
                     mm[i + 1][j] = (matrix *) x;
@@ -82,7 +114,7 @@ void insertionSortRowsMatrixByRowCriteria(matrix m, matrix ***mm, int (*criteria
 void selectionSortColsMatrixByColCriteria(matrix m, matrix **mm, int (*criteria)(int *, int)) {
     for (int i = 0; i < m.nRows - 1; i++) {
         int minPos = i;
-        for (int j = i + 1; j < m.nCols; j++)
+        for (int j = i + 1; j < m.nRows; j++)
             if (mm[j] < mm[minPos])
                 minPos = j;
         swapColumns(mm, (int) &mm[i], (int) &mm[minPos]);
@@ -91,7 +123,6 @@ void selectionSortColsMatrixByColCriteria(matrix m, matrix **mm, int (*criteria)
 
 bool isSquareMatrix(matrix *m, matrix **mm) {
     int size = m->nCols * m->nRows;
-
     for (int i = 0; i < size; i++) {
         if (mm[i] != mm[i / m->nCols * m->nRows + i % m->nCols]) {
             return false;
@@ -103,7 +134,6 @@ bool isSquareMatrix(matrix *m, matrix **mm) {
 bool areTwoMatricesEqual(matrix *m1, matrix *m2, matrix **mm1, matrix **mm2) {
     int size1 = m1->nCols * m1->nRows;
     int size2 = m2->nCols * m2->nRows;
-
     for (int i = 0; i < size1; i++) {
         for (int j = 0; j < size2; j++) {
             if (mm1[i] != mm2[j]) {
@@ -115,21 +145,30 @@ bool areTwoMatricesEqual(matrix *m1, matrix *m2, matrix **mm1, matrix **mm2) {
 }
 
 bool isEMatrix(matrix *m, matrix ***mm) {
+    int kr = 1;
     for (int i = 0; i < m->nRows; i++) {
-        for (int j = 0; j < m->nCols; j++) {
-            if (i == j && mm[i][j] != 1) {
-                return true;
-            } else {
-                return false;
+        for (int j = 0; j < m->nCols; j++)
+            if (((i == j) && (mm[i][j] != 1)) || ((i != j) && (mm[i][j] != 0))) {
+                kr = 0;
+                break;
             }
+        if (kr == 1) {
+            return true;
+        } else {
+            return false;
         }
     }
 }
 
-bool isSymmetricMatrix(matrix *m, matrix ***mm) {
+bool issSymmetricMatrix(matrix *m, matrix ***mm) {
+    int kr = 1;
     for (int i = 0; i < m->nRows - 1; ++i) {
         for (int j = i + 1; j < m->nCols; ++j) {
-            if (mm[i][j] == mm[j][i]) {
+            if (mm[i][j] != mm[j][i]) {
+                kr = 0;
+                break;
+            }
+            if (kr == 1) {
                 return true;
             } else {
                 return false;
@@ -140,9 +179,8 @@ bool isSymmetricMatrix(matrix *m, matrix ***mm) {
 
 void transposeMatrix(matrix *m, matrix **mm1, matrix **mm2) {
     int i, j;
-
     for (i = 0; i < m->nRows; i++) {
-        for (j = 0; j < m->nCols; j++) {
+        for (j = 0; j < m->nRows; j++) {
             mm1[i][j] = mm2[j][i];
         }
     }
@@ -150,10 +188,8 @@ void transposeMatrix(matrix *m, matrix **mm1, matrix **mm2) {
 
 void transposeSquareMatrix(matrix *m, matrix **mm1, matrix **mm2) {
     int i, j;
-
     for (i = 0; i < m->nRows; i++) {
-        for (j = 0; j < m->nCols; j++) {
-
+        for (j = 0; j < m->nRows; j++) {
             if (isSquareMatrix(m, mm1)) {
                 mm1[i][j] = mm2[j][i];
             }
@@ -164,10 +200,9 @@ void transposeSquareMatrix(matrix *m, matrix **mm1, matrix **mm2) {
 position getMinValuePos(matrix *m, matrix ***mm) {
     for (int j = 0; j < m->nRows; ++j) {
         int min = 0;
-
         for (int i = 1; i < m->nCols; ++i) {
             if (mm[i][j] < mm[min][j]) {
-                mm[j] = (matrix **) min;
+                mm[j] = (matrix *) min;
             }
         }
     }
@@ -175,14 +210,11 @@ position getMinValuePos(matrix *m, matrix ***mm) {
 
 position getMaxValuePos(matrix m, matrix **mm) {
     struct matrix max;
-
-    for (int i = 0; (int **) i < m.nRows; i++)
-        for (int j = 0; (int **) j < m.nCols; j++) {
-
+    for (int i = 0; (int **) i < m.values; i++)
+        for (int j = 0; (int **) j < m.values; j++)
             if ((i == 0 && j == 0) || mm[i][j] > max) {
                 max = mm[i][j];
             }
-        }
 }
 
 
