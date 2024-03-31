@@ -1,7 +1,7 @@
 #include <malloc.h>
 #include <stdbool.h>
 #include <math.h>
-#include "libs/data_structures/matrix/matrix.h"
+#include "matrix.h"
 
 
 matrix getMemMatrix(int nRows, int nCols) {
